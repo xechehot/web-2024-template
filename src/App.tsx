@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, KeyboardEvent } from "react";
 import useLocalStorageState from "use-local-storage-state";
 import styled from "styled-components";
 import {
@@ -7,168 +7,170 @@ import {
   Button,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   IconButton,
-  Checkbox,
+  Box,
+  Paper,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 
-interface Todo {
+interface Ingredient {
   id: number;
-  text: string;
-  done: boolean;
+  name: string;
+  weight: number;
 }
 
-const AppContainer = styled.div`
+const AppContainer = styled(Paper)`
   max-width: 600px;
-  margin: 0 auto;
+  margin: 2rem auto;
   padding: 2rem;
   text-align: center;
+  background-color: #f0f0f0;
+  border-radius: 15px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 `;
 
 const StyledButton = styled(Button)`
   && {
     margin-top: 1rem;
+    background-color: #ff6b6b;
+    color: white;
+    &:hover {
+      background-color: #ff8787;
+    }
   }
 `;
 
-const StyledListItemText = styled(ListItemText)<{ done: boolean }>`
+const StyledListItem = styled(ListItem)`
   && {
-    text-decoration: ${(props) => (props.done ? "line-through" : "none")};
+    background-color: white;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   }
 `;
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: "#ff6b6b",
+    },
+    secondary: {
+      main: "#4ecdc4",
+    },
+  },
+  typography: {
+    fontFamily: "'Poppins', sans-serif",
+  },
+});
 
 function App() {
-  const [todos, setTodos] = useLocalStorageState<Todo[]>("todos", {
+  const [ingredients, setIngredients] = useLocalStorageState<Ingredient[]>("ingredients", {
     defaultValue: [],
   });
-  const [newTodo, setNewTodo] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editText, setEditText] = useState(""); // Add this line
+  const [newIngredientName, setNewIngredientName] = useState("");
+  const [newIngredientWeight, setNewIngredientWeight] = useState("");
 
-  useEffect(() => {
-    if (todos.length === 0) {
-      const boilerplateTodos = [
-        { id: 1, text: "Install Node.js", done: false },
-        { id: 2, text: "Install Cursor IDE", done: false },
-        { id: 3, text: "Log into Github", done: false },
-        { id: 4, text: "Fork a repo", done: false },
-        { id: 5, text: "Make changes", done: false },
-        { id: 6, text: "Commit", done: false },
-        { id: 7, text: "Deploy", done: false },
-      ];
-      setTodos(boilerplateTodos);
-    }
-  }, [todos, setTodos]);
-
-  const handleAddTodo = () => {
-    if (newTodo.trim() !== "") {
-      setTodos([
-        ...todos,
-        { id: Date.now(), text: newTodo.trim(), done: false },
+  const handleAddIngredient = () => {
+    if (newIngredientName.trim() !== "" && newIngredientWeight.trim() !== "") {
+      setIngredients([
+        ...ingredients,
+        {
+          id: Date.now(),
+          name: newIngredientName.trim(),
+          weight: parseFloat(newIngredientWeight),
+        },
       ]);
-      setNewTodo("");
+      setNewIngredientName("");
+      setNewIngredientWeight("");
     }
   };
 
-  const handleDeleteTodo = (id: number) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  const handleKeyPress = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter') {
+      handleAddIngredient();
+    }
   };
 
-  const handleToggleTodo = (id: number) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, done: !todo.done } : todo
+  const handleDeleteIngredient = (id: number) => {
+    setIngredients(ingredients.filter((ingredient) => ingredient.id !== id));
+  };
+
+  const handleWeightChange = (id: number, newWeight: string) => {
+    const oldWeight = ingredients.find((ingredient) => ingredient.id === id)?.weight || 0;
+    const ratio = parseFloat(newWeight) / oldWeight;
+
+    setIngredients(
+      ingredients.map((ingredient) =>
+        ingredient.id === id
+          ? { ...ingredient, weight: parseFloat(newWeight) }
+          : { ...ingredient, weight: ingredient.weight * ratio }
       )
     );
   };
 
-  const handleEditTodo = (id: number) => {
-    setEditingId(id);
-    const todoToEdit = todos.find((todo) => todo.id === id);
-    if (todoToEdit) {
-      setEditText(todoToEdit.text);
-    }
-  };
-
-  const handleUpdateTodo = (id: number) => {
-    if (editText.trim() !== "") {
-      setTodos(
-        todos.map((todo) =>
-          todo.id === id ? { ...todo, text: editText.trim() } : todo
-        )
-      );
-    }
-    setEditingId(null);
-    setEditText("");
-  };
-
   return (
-    <AppContainer>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Todo List
-      </Typography>
-      <TextField
-        fullWidth
-        variant="outlined"
-        label="New Todo"
-        value={newTodo}
-        onChange={(e) => setNewTodo(e.target.value)}
-        onKeyPress={(e) => e.key === "Enter" && handleAddTodo()}
-        autoFocus // Add this line to enable autofocus
-      />
-      <StyledButton
-        variant="contained"
-        color="primary"
-        fullWidth
-        onClick={handleAddTodo}
-      >
-        Add Todo
-      </StyledButton>
-      <List>
-        {todos.map((todo) => (
-          <ListItem key={todo.id} dense>
-            <Checkbox
-              edge="start"
-              checked={todo.done}
-              onChange={() => handleToggleTodo(todo.id)}
-            />
-            {editingId === todo.id ? (
+    <ThemeProvider theme={theme}>
+      <AppContainer elevation={3}>
+        <Typography variant="h4" component="h1" gutterBottom color="primary">
+          Recipe Calculator
+        </Typography>
+        <Box display="flex" justifyContent="space-between" mb={2}>
+          <TextField
+            variant="outlined"
+            label="Ingredient Name"
+            value={newIngredientName}
+            onChange={(e) => setNewIngredientName(e.target.value)}
+            style={{ width: "55%" }}
+          />
+          <TextField
+            variant="outlined"
+            label="Weight (g)"
+            type="number"
+            value={newIngredientWeight}
+            onChange={(e) => setNewIngredientWeight(e.target.value)}
+            onKeyPress={handleKeyPress}
+            style={{ width: "40%" }}
+          />
+        </Box>
+        <StyledButton
+          variant="contained"
+          color="primary"
+          fullWidth
+          onClick={handleAddIngredient}
+          startIcon={<AddIcon />}
+        >
+          Add Ingredient
+        </StyledButton>
+        <List>
+          {ingredients.map((ingredient) => (
+            <StyledListItem key={ingredient.id}>
+              <Typography variant="body1" style={{ flexGrow: 1, marginRight: '1rem' }}>
+                {ingredient.name}
+              </Typography>
               <TextField
-                fullWidth
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onBlur={() => handleUpdateTodo(todo.id)}
-                onKeyPress={(e) =>
-                  e.key === "Enter" && handleUpdateTodo(todo.id)
-                }
-                autoFocus
+                variant="outlined"
+                type="number"
+                value={ingredient.weight.toFixed(2)}
+                onChange={(e) => handleWeightChange(ingredient.id, e.target.value)}
+                style={{ width: "150px", marginRight: "1rem" }}
+                InputProps={{
+                  endAdornment: <Typography variant="caption">g</Typography>,
+                }}
               />
-            ) : (
-              <StyledListItemText primary={todo.text} done={todo.done} />
-            )}
-            <ListItemSecondaryAction>
-              <IconButton
-                edge="end"
-                aria-label="edit"
-                onClick={() => handleEditTodo(todo.id)}
-              >
-                <EditIcon />
-              </IconButton>
               <IconButton
                 edge="end"
                 aria-label="delete"
-                onClick={() => handleDeleteTodo(todo.id)}
+                onClick={() => handleDeleteIngredient(ingredient.id)}
               >
                 <DeleteIcon />
               </IconButton>
-            </ListItemSecondaryAction>
-          </ListItem>
-        ))}
-      </List>
-    </AppContainer>
+            </StyledListItem>
+          ))}
+        </List>
+      </AppContainer>
+    </ThemeProvider>
   );
 }
 
